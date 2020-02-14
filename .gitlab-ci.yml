@@ -1,0 +1,31 @@
+before_script:
+  - apt-get update -qq
+  - apt-get install -qq git
+  # Setup SSH deploy keys
+  - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - mkdir -p ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+
+docker-build:
+  # Official docker image.
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u demonoid81 -p p@sSw0rD2808523490
+  script:
+    - docker build --pull -t demonoid81/garagemq:latest .
+    - docker push demonoid81/garagemq:latest
+  only:
+    - master
+
+deploy:
+  stage: deploy
+  script:
+    - ssh user@92.255.46.46 -p 10122 'kubectl delete -f ampq.yaml ; kubectl apply -f ampq.yaml'
+  only:
+    - master
